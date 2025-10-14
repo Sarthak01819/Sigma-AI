@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import Image from "next/image";
+import ChatInputBox from "./_components/ChatInputBox";
 
 export default function Home() {
 
@@ -10,10 +11,7 @@ export default function Home() {
 
   return (
     <div>
-      <h2>Helooooooooo</h2>
-      <Button>Click Me!</Button>
-      <Button onClick = {() => setTheme('dark')}>Dark Mode</Button>
-      <Button onClick = {() => setTheme('light')}>Light Mode</Button>
+      <ChatInputBox />
     </div>
   );
 }

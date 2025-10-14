@@ -42,7 +42,7 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                <Button className="w-full mb-4">Upgrade to Plus</Button>
+                <Button className="w-full mb-4">Sign In / Sign Up</Button>
             </SidebarFooter>
         </Sidebar>
     )
