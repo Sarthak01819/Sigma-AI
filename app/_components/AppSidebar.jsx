@@ -9,7 +9,7 @@ import {
     SidebarHeader,
 } from "@/components/ui/sidebar"
 import { SignInButton, useUser } from "@clerk/nextjs";
-import { Bolt, Moon, Sun, User2, Zap } from "lucide-react"
+import { Moon, Sun, User2, Zap } from "lucide-react"
 import { useTheme } from "next-themes";
 import Image from "next/image"
 import UsageCreditProgress from "./UsageCreditProgress";
