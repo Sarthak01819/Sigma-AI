@@ -1,6 +1,8 @@
 import AiModelList from '@/shared/AiModelList'
 import Image from 'next/image'
-import React, { use, useContext, useState } from 'react'
+import React, { useContext, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import {
     Select,
@@ -25,26 +27,32 @@ const AiMultiModel = () => {
 
     const [aiModelList, setAiModelList] = useState(AiModelList)
 
-    const { aiSelectedModel, setAiSelectedModel } = useContext(AiSelectedModelContext)
+    const { aiSelectedModel, setAiSelectedModel, messages, setMessages } = useContext(AiSelectedModelContext)
 
     const onToggleChange = (model, value) => {
         setAiModelList((prev) => {
-            return prev.map((m) => m.model == model ? { ...m, enable: value } : m)
+            return prev.map((m) => m.model === model ? { ...m, enable: value } : m)
         })
+
+        setAiSelectedModel((prev) => ({
+            ...prev,
+            [model]: {
+                ...(prev?.[model] ?? {}),
+                enable: value,
+            }
+        }))
     }
 
     const onSelectValue = async (parentModel, value) => {
+        // Update local selected model state
         setAiSelectedModel(prev => ({
             ...prev,
             [parentModel]: {
                 modelId: value,
             }
         }))
-        // Update the firebase database
-        const docRef = doc(db, 'users', user?.primaryEmailAddress?.emailAddress);
-        await updateDoc(docRef, {
-            selectedModelPref: aiSelectedModel,
-        });
+
+        
     }
 
     return (
@@ -54,7 +62,7 @@ const AiMultiModel = () => {
                     <div className='flex w-full h-[70px] items-center justify-between border-b p-3 '>
                         <div className='flex items-center gap-4'>
                             <Image src={model.icon} alt={'model.name'} width={24} height={24} />
-                            {model.enable && <Select defaultValue = {aiSelectedModel[model.model].modelId} onValueChange={(value) => onSelectValue(model.model, value)} disabled={model.premium}>
+                            {model.enable && <Select defaultValue={aiSelectedModel[model.model].modelId} onValueChange={(value) => onSelectValue(model.model, value)} disabled={model.premium}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder={aiSelectedModel[model.model].modelId} />
                                 </SelectTrigger>
@@ -81,6 +89,31 @@ const AiMultiModel = () => {
                     </div>
                     <div className='flex items-center justify-center w-full'>
                         {model.premium && model.enable && <Button className="w-[50%] mx-auto my-4"><Lock /> Upgrade to Plus</Button>}
+                    </div>
+                    <div>
+                        {model.enable ? (
+                            <div className='flex-1 p-4 space-y-2 overflow-y-auto max-h-[65vh]'>
+                                {Array.isArray(messages?.[model.model]) ? (
+                                    messages[model.model].map((m, i) => (
+                                        <div key={i} className={`p-2 rounded-md ${m.role == 'user' ?
+                                            "bg-blue-100 text-blue-900" : "bg-gray-100 text-gray-900"
+                                        }`}>
+
+                                            {m.role == 'assistant' && (
+                                                <span className='block text-xs text-gray-500'>{m.model ?? model.model}</span>
+                                            )}
+                                            <div className='max-h-[50vh]'>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {m.content}
+                                                </ReactMarkdown>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className='text-sm text-muted-foreground'>No messages yet.</div>
+                                )}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             })}
