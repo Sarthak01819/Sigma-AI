@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from './_components/AppSidebar'
@@ -8,10 +8,17 @@ import AppHeader from './_components/AppHeader'
 import { useUser } from '@clerk/nextjs'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/config/FirebaseConfig'
+import { AiSelectedModelContext } from '@/context/AiSelectedModelContext'
+import { DefaultModel } from '@/shared/AiModelsShared'
+import { UserDetailContext } from '@/context/UserDetailContext'
 
 const Provider = ({ children, ...props }) => {
 
-    const {user} = useUser();
+    const [aiSelectedModel, setAiSelectedModel] = useState(DefaultModel)
+
+    const [userDetail, setUserDetail] = useState()
+
+    const { user } = useUser();
 
     useEffect(() => {
         if (user) {
@@ -21,11 +28,14 @@ const Provider = ({ children, ...props }) => {
 
     const CreateNewuser = async () => {
         // If user exists?
-        const userRef = doc(db, 'users',user.primaryEmailAddress?.emailAddress);
+        const userRef = doc(db, 'users', user.primaryEmailAddress?.emailAddress);
         const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()){
+        if (userSnap.exists()) {
             console.log('User already exists');
+            const userInfo = userSnap.data();
+            setAiSelectedModel(userInfo?.selectedModelPref);
+            setUserDetail(userInfo);
             return;
         }
         else {
@@ -40,6 +50,7 @@ const Provider = ({ children, ...props }) => {
             };
             await setDoc(userRef, userData);
             console.log('New user created');
+            setUserDetail(userData);
         }
 
         // If not create a new user
@@ -52,14 +63,17 @@ const Provider = ({ children, ...props }) => {
             enableSystem
             disableTransitionOnChange
             {...props}>
-            <SidebarProvider>
-                <AppSidebar />
-
-                <div className='w-full'>
-                    <AppHeader />
-                    {children}
-                </div>
-            </SidebarProvider>
+            <UserDetailContext.Provider value={{ userDetail, setUserDetail }}>
+                <AiSelectedModelContext.Provider value={{ aiSelectedModel, setAiSelectedModel }}>
+                    <SidebarProvider>
+                        <AppSidebar />
+                        <div className='w-full'>
+                            <AppHeader />
+                            {children}
+                        </div>
+                    </SidebarProvider>
+                </AiSelectedModelContext.Provider>
+            </UserDetailContext.Provider>
         </NextThemesProvider>
     )
 }
