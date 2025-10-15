@@ -6,7 +6,7 @@ export default [
 
     icon: "/gpt.png",
 
-    premium: true,
+    premium: false,
 
     enable: true,
 
@@ -58,7 +58,7 @@ export default [
 
     icon: "/deepseek.png",
 
-    premium: true,
+    premium: false,
 
     enable: true,
 
@@ -78,7 +78,7 @@ export default [
 
     icon: "/mistral.png",
 
-    premium: true,
+    premium: false,
 
     enable: true,
 
@@ -98,7 +98,7 @@ export default [
 
     icon: "/grok.png",
 
-    premium: true,
+    premium: false,
 
     enable: true,
 
