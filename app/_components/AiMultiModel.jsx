@@ -20,6 +20,7 @@ import { AiSelectedModelContext } from '@/context/AiSelectedModelContext'
 import { useUser } from '@clerk/nextjs'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '@/config/FirebaseConfig'
+import { useSearchParams } from 'next/navigation'
 
 const AiMultiModel = () => {
 
@@ -51,8 +52,6 @@ const AiMultiModel = () => {
                 modelId: value,
             }
         }))
-
-        
     }
 
     return (
@@ -97,15 +96,16 @@ const AiMultiModel = () => {
                                     messages[model.model].map((m, i) => (
                                         <div key={i} className={`p-2 rounded-md ${m.role == 'user' ?
                                             "bg-blue-100 text-blue-900" : "bg-gray-100 text-gray-900"
-                                        }`}>
+                                            }`}>
 
                                             {m.role == 'assistant' && (
                                                 <span className='block text-xs text-gray-500'>{m.model ?? model.model}</span>
                                             )}
                                             <div className='max-h-[50vh]'>
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                    {m.content}
-                                                </ReactMarkdown>
+                                                {m?.content !== 'loading' && m?.content &&
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                        {m?.content}
+                                                    </ReactMarkdown>}
                                             </div>
                                         </div>
                                     ))
