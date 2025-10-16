@@ -17,12 +17,24 @@ import { Switch } from "@/components/ui/switch"
 import { Lock, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AiSelectedModelContext } from '@/context/AiSelectedModelContext'
-import { useUser } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '@/config/FirebaseConfig'
 import { useSearchParams } from 'next/navigation'
 
 const AiMultiModel = () => {
+
+    const { has } = useAuth();
+
+    // Safe wrapper: some auth contexts may not provide `has` as a function
+    const hasPlan = (criteria) => {
+        try {
+            if (typeof has === 'function') return has(criteria);
+        } catch (e) {
+            console.warn('Error calling has():', e);
+        }
+        return false;
+    }
 
     const { user } = useUser();
 
@@ -61,7 +73,7 @@ const AiMultiModel = () => {
                     <div className='flex w-full h-[70px] items-center justify-between border-b p-3 '>
                         <div className='flex items-center gap-4'>
                             <Image src={model.icon} alt={'model.name'} width={24} height={24} />
-                            {model.enable && <Select defaultValue={aiSelectedModel[model.model].modelId} onValueChange={(value) => onSelectValue(model.model, value)} disabled={model.premium}>
+                            {!hasPlan({ plan: 'unlimited_plan' }) && model.enable && <Select defaultValue={aiSelectedModel[model.model].modelId} onValueChange={(value) => onSelectValue(model.model, value)} disabled={model.premium}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder={aiSelectedModel[model.model].modelId} />
                                 </SelectTrigger>
@@ -82,15 +94,15 @@ const AiMultiModel = () => {
                             </Select>}
                         </div>
                         <div>
-                            {model.enable ? <Switch checked={model.enable} onCheckedChange={(v) => onToggleChange(model.model, v)} />
+                            {model.enable ? <Switch checked={model.enable} disabled={!hasPlan({ plan: 'unlimited_plan' }) && model.premium} onCheckedChange={(v) => onToggleChange(model.model, v)} />
                                 : <MessageSquare onClick={() => onToggleChange(model.model, true)} />}
                         </div>
                     </div>
                     <div className='flex items-center justify-center w-full'>
-                        {model.premium && model.enable && <Button className="w-[50%] mx-auto my-4"><Lock /> Upgrade to Plus</Button>}
+                        {!hasPlan({ plan: 'unlimited_plan' }) && model.premium && model.enable && <Button className="w-[50%] mx-auto my-4"><Lock /> Upgrade to Plus</Button>}
                     </div>
                     <div>
-                        {model.enable ? (
+                        {model.enable && (!model.premium || hasPlan({ plan: 'unlimited_plan' })) ? (
                             <div className='flex-1 p-4 space-y-2 overflow-auto max-h-[65vh]'>
                                 {Array.isArray(messages?.[model.model]) ? (
                                     messages[model.model].map((m, i) => (

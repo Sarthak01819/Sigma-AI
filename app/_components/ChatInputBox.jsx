@@ -9,7 +9,7 @@ import { getDoc } from 'firebase/firestore'
 import { v4 as uuidv4 } from 'uuid'
 import { doc, setDoc } from 'firebase/firestore'
 import { db } from '@/config/FirebaseConfig'
-import { useUser } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -26,6 +26,10 @@ const ChatInputBox = () => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const params = useSearchParams();
+
+    const { has } = useAuth();
+
+    // const paidUser = has({ plan: 'unlimited_plan' })
 
     useEffect(() => {
         const chatId_ = params.get('chatId');
@@ -44,16 +48,18 @@ const ChatInputBox = () => {
         if (!userInput.trim()) return;
 
         // Call only if user free
-        // Deduct and Check token limit
-        const result = await axios.post('/api/user-remaining-msg', {
-            token: 1,
-        });
+        if (!has({ plan: 'unlimited_plan' })) {
+            // Deduct and Check token limit
+            const result = await axios.post('/api/user-remaining-msg', {
+                token: 1,
+            });
 
-        const remainingToken = result?.data?.remainingToken;
-        if (remainingToken <= 0) {
-            console.log("Limit Exceeded!");
-            toast.error("You have exceeded your free message limit. Please upgrade to the Plus.");
-            return;
+            const remainingToken = result?.data?.remainingToken;
+            if (remainingToken <= 0) {
+                console.log("Limit Exceeded!");
+                toast.error("You have exceeded your free message limit. Please upgrade to the Plus.");
+                return;
+            }
         }
 
         // 1️⃣ Add user message to all enabled models

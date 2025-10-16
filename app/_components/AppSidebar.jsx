@@ -8,7 +8,7 @@ import {
     SidebarGroup,
     SidebarHeader,
 } from "@/components/ui/sidebar"
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { SignInButton, useAuth, useUser } from "@clerk/nextjs";
 import { Moon, Sun, User2, Zap } from "lucide-react"
 import { useTheme } from "next-themes";
 import Image from "next/image"
@@ -20,6 +20,7 @@ import moment from "moment";
 import Link from "next/link";
 import axios from "axios";
 import { AiSelectedModelContext } from "@/context/AiSelectedModelContext";
+import PricingModal from "./PricingModal";
 
 export function AppSidebar() {
 
@@ -33,10 +34,22 @@ export function AppSidebar() {
 
     const [chatHistory, setChatHistory] = useState([])
 
+    const { has } = useAuth();
+
+    // Safe wrapper for has (some environments may not expose has)
+    const hasPlan = (criteria) => {
+        try {
+            if (typeof has === 'function') return has(criteria);
+        } catch (e) {
+            console.warn('Error calling has():', e);
+        }
+        return false;
+    }
+
     useEffect(() => {
-       GetRemainingTokenMsgs();
-    }, [messages])
-    
+        if (user) GetRemainingTokenMsgs();
+    }, [messages, user])
+
 
     useEffect(() => {
         user && GetChatHistory();
@@ -78,8 +91,13 @@ export function AppSidebar() {
     };
 
     const GetRemainingTokenMsgs = async () => {
-        const result = await axios.post('/api/user-remaining-msg');
-        setFreeMsgCount(result?.data?.remainingToken);
+        try {
+            const result = await axios.get('/api/user-remaining-msg');
+            setFreeMsgCount(result?.data?.remainingToken ?? 0);
+        } catch (err) {
+            console.error('Failed to fetch remaining tokens', err);
+            setFreeMsgCount(0);
+        }
     }
 
 
@@ -108,11 +126,11 @@ export function AppSidebar() {
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <div className='py-3 relative '>
+                    <div className='py-3 relative overflow-hidden h-[44vh]'>
                         <h2 className="font-bold text-lg px-2 ">Chat</h2>
                         {!user && <p className="text-sm text-gray-400">Sign in  to start chating with multiple AI models </p>}
 
-                        <div className="w-full px-2 max-h-[40vh] absolute overflow-y-auto">
+                        <div className="w-full px-2 max-h-[39vh] absolute overflow-y-auto">
                             {chatHistory.map((chat, index) => (
                                 <Link href={'?chatId=' + chat.chatId} key={index} className="p-3 mt-3 border rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 flex justify-between items-center">
                                     <p className="text-sm line-clamp-1">{GetLastUserMessageFromChat(chat).message}</p>
@@ -130,11 +148,15 @@ export function AppSidebar() {
                     <Button className={"w-full mb-4 cursor-pointer"}>Sign In / Sign Up</Button>
                 </SignInButton>
                     :
-                    <div>
-                        <UsageCreditProgress remainingToken={freeMsgCount} />
-                        <Button className={'flex my-4 w-full'} variant={''}>
-                            <Zap /><h2>Upgrade to plus</h2>
-                        </Button>
+                    <div className="w-full flex flex-col">
+                        {!hasPlan({ plan: 'unlimited_plan' }) && <div className="w-full flex flex-col">
+                            <UsageCreditProgress remainingToken={freeMsgCount} />
+                            <PricingModal className={"w-full"}>
+                                <Button className={'flex my-4 w-full'} variant={''}>
+                                    <Zap /><h2>Upgrade to plus</h2>
+                                </Button>
+                            </PricingModal>
+                        </div>}
                         <Button className={'flex w-full my-5'} variant={'ghost'}>
                             <User2 /><h2>Settings</h2>
                         </Button>
