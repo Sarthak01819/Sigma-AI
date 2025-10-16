@@ -91,7 +91,7 @@ const AiMultiModel = () => {
                     </div>
                     <div>
                         {model.enable ? (
-                            <div className='flex-1 p-4 space-y-2 overflow-y-auto max-h-[65vh]'>
+                            <div className='flex-1 p-4 space-y-2 overflow-auto max-h-[65vh]'>
                                 {Array.isArray(messages?.[model.model]) ? (
                                     messages[model.model].map((m, i) => (
                                         <div key={i} className={`p-2 rounded-md ${m.role == 'user' ?
@@ -101,7 +101,7 @@ const AiMultiModel = () => {
                                             {m.role == 'assistant' && (
                                                 <span className='block text-xs text-gray-500'>{m.model ?? model.model}</span>
                                             )}
-                                            <div className='max-h-[50vh]'>
+                                            <div className='max-h-[50vh] overflow-auto px-2'>
                                                 {m?.content !== 'loading' && m?.content &&
                                                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                         {m?.content}

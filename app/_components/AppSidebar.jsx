@@ -15,16 +15,28 @@ import Image from "next/image"
 import UsageCreditProgress from "./UsageCreditProgress";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/config/FirebaseConfig";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import moment from "moment";
 import Link from "next/link";
+import axios from "axios";
+import { AiSelectedModelContext } from "@/context/AiSelectedModelContext";
 
 export function AppSidebar() {
 
     const { theme, setTheme } = useTheme();
+
+    const { aiSelectedModel, setAiSelectedModel, messages, setMessages } = useContext(AiSelectedModelContext)
+
     const { user } = useUser();
 
+    const [freeMsgCount, setFreeMsgCount] = useState(0);
+
     const [chatHistory, setChatHistory] = useState([])
+
+    useEffect(() => {
+       GetRemainingTokenMsgs();
+    }, [messages])
+    
 
     useEffect(() => {
         user && GetChatHistory();
@@ -41,29 +53,34 @@ export function AppSidebar() {
     }
 
     const GetLastUserMessageFromChat = (chat) => {
-    const allMessages = Object.values(chat.messages || {}).flat();
-    const userMessages = allMessages.filter(msg => msg.role === 'user');
-    const lastUserMsgObj = userMessages[userMessages.length - 1];
+        const allMessages = Object.values(chat.messages || {}).flat();
+        const userMessages = allMessages.filter(msg => msg.role === 'user');
+        const lastUserMsgObj = userMessages[userMessages.length - 1];
 
-    // Safely get the content (handles both array or string cases)
-    let lastUserMsg = null;
-    if (lastUserMsgObj) {
-        if (Array.isArray(lastUserMsgObj.content)) {
-            lastUserMsg = lastUserMsgObj.content[0]?.text || null;
-        } else if (typeof lastUserMsgObj.content === 'string') {
-            lastUserMsg = lastUserMsgObj.content;
+        // Safely get the content (handles both array or string cases)
+        let lastUserMsg = null;
+        if (lastUserMsgObj) {
+            if (Array.isArray(lastUserMsgObj.content)) {
+                lastUserMsg = lastUserMsgObj.content[0]?.text || null;
+            } else if (typeof lastUserMsgObj.content === 'string') {
+                lastUserMsg = lastUserMsgObj.content;
+            }
         }
-    }
 
-    const lastUpdated = chat.lastUpdated || Date.now();
-    const formattedDate = moment(lastUpdated).fromNow();
+        const lastUpdated = chat.lastUpdated || Date.now();
+        const formattedDate = moment(lastUpdated).fromNow();
 
-    return {
-        chatId: chat.chatId,
-        message: lastUserMsg,
-        lastMsgDate: formattedDate,
+        return {
+            chatId: chat.chatId,
+            message: lastUserMsg,
+            lastMsgDate: formattedDate,
+        };
     };
-};
+
+    const GetRemainingTokenMsgs = async () => {
+        const result = await axios.post('/api/user-remaining-msg');
+        setFreeMsgCount(result?.data?.remainingToken);
+    }
 
 
     return (
@@ -114,7 +131,7 @@ export function AppSidebar() {
                 </SignInButton>
                     :
                     <div>
-                        <UsageCreditProgress />
+                        <UsageCreditProgress remainingToken={freeMsgCount} />
                         <Button className={'flex my-4 w-full'} variant={''}>
                             <Zap /><h2>Upgrade to plus</h2>
                         </Button>
