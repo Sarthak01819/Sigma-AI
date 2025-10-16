@@ -11,6 +11,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { db } from '@/config/FirebaseConfig'
 import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
+import { toast } from 'sonner'
 
 const ChatInputBox = () => {
 
@@ -41,6 +42,19 @@ const ChatInputBox = () => {
 
     const handleSend = async () => {
         if (!userInput.trim()) return;
+
+        // Call only if user free
+        // Deduct and Check token limit
+        const result = await axios.post('/api/user-remaining-msg', {
+            token: 1,
+        });
+
+        const remainingToken = result?.data?.remainingToken;
+        if (remainingToken <= 0) {
+            console.log("Limit Exceeded!");
+            toast.error("You have exceeded your free message limit. Please upgrade to the Plus.");
+            return;
+        }
 
         // 1️⃣ Add user message to all enabled models
         setMessages((prev) => {
