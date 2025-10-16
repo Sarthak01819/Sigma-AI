@@ -1,15 +1,42 @@
 import { Button } from '@/components/ui/button'
 import { Mic, Paperclip, Send } from 'lucide-react'
-import React, { useContext, useState } from 'react'
+import React, { use, useContext, useState } from 'react'
 import AiMultiModel from './AiMultiModel'
 import { AiSelectedModelContext } from '@/context/AiSelectedModelContext'
 import axios from 'axios'
+import { useEffect } from 'react'
+import { getDoc } from 'firebase/firestore'
+import { v4 as uuidv4 } from 'uuid'
+import { doc, setDoc } from 'firebase/firestore'
+import { db } from '@/config/FirebaseConfig'
+import { useUser } from '@clerk/nextjs'
+import { useSearchParams } from 'next/navigation'
 
 const ChatInputBox = () => {
 
     const [userInput, setUserInput] = useState()
 
     const { aiSelectedModel, setAiSelectedModel, messages, setMessages } = useContext(AiSelectedModelContext)
+
+    const [chatId, setChatId] = useState()
+
+    const { user } = useUser();
+
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    const params = useSearchParams();
+
+    useEffect(() => {
+        const chatId_ = params.get('chatId');
+        if (chatId_) {
+            setChatId(chatId_);
+            GetMessages(chatId_);
+        } else {
+            const newChatId = uuidv4();
+            setChatId(newChatId);
+            setIsLoaded(true);
+        }
+    }, [params]);
 
 
     const handleSend = async () => {
@@ -91,6 +118,46 @@ const ChatInputBox = () => {
             }
         });
     };
+
+    const SaveMesages = async () => {
+        if (!chatId) return;
+
+        // Check if messages object is empty or all collections are empty
+        const hasNonEmptyMessages = Object.values(messages).some(
+            (msgArray) => Array.isArray(msgArray) && msgArray.length > 0
+        );
+
+        if (!hasNonEmptyMessages) {
+            console.log("No messages to save. Skipping Firestore write.");
+            return; // Don't create the collection
+        }
+
+        const docRef = doc(db, 'chatHistory', chatId);
+        await setDoc(docRef, {
+            chatId,
+            userEmail: user?.primaryEmailAddress?.emailAddress || "guest",
+            messages,
+            lastUpdated: Date.now(),
+        });
+    };
+
+
+
+    const GetMessages = async (id) => {
+        const docRef = doc(db, 'chatHistory', id);
+        const docSnap = await getDoc(docRef);
+        const docData = docSnap.data();
+        if (docData?.messages) {
+            setMessages(docData.messages);
+        }
+        setIsLoaded(true);
+    };
+
+    useEffect(() => {
+        if (isLoaded && user && messages) {
+            SaveMesages();
+        }
+    }, [messages, user, isLoaded]);
 
 
     return (

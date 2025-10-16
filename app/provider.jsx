@@ -18,38 +18,43 @@ const Provider = ({ children, ...props }) => {
 
     const [userDetail, setUserDetail] = useState()
 
-    const [messages, setMessages] = useState()
+    // messages is an object keyed by model name -> array of messages
+    const [messages, setMessages] = useState({})
 
     const { user } = useUser();
 
     useEffect(() => {
-        if (user) {
+        const email = user?.primaryEmailAddress?.emailAddress
+        if (user && email) {
             CreateNewuser();
         }
     }, [user])
 
-    useEffect(() => {
-      if(aiSelectedModel) {
-        updatedAIModelSelectionPref();
-      }
-    }, [aiSelectedModel])
+        useEffect(() => {
+            if(aiSelectedModel) {
+                updatedAIModelSelectionPref();
+            }
+        }, [aiSelectedModel])
 
     const updatedAIModelSelectionPref = async () => {
-        const docRef = doc(db, 'users', user?.primaryEmailAddress?.emailAddress);
-        const updated = {
-            ...aiSelectedModel,
-            [parentModel]: { modelId: value }
+        try {
+            const email = user?.primaryEmailAddress?.emailAddress
+            if (!email) return
+            const docRef = doc(db, 'users', email)
+            // write the current selected model preferences to the user document (merge so other fields remain)
+            await setDoc(docRef, { selectedModelPref: aiSelectedModel }, { merge: true })
+        } catch (err) {
+            console.error('Failed to update AI model selection preference:', err)
         }
-        await updateDoc(docRef, {
-            selectedModelPref: updated,
-        });
     }
     
 
     const CreateNewuser = async () => {
         // If user exists?
-        const userRef = doc(db, 'users', user.primaryEmailAddress?.emailAddress);
-        const userSnap = await getDoc(userRef);
+        const email = user?.primaryEmailAddress?.emailAddress
+        if (!email) return
+        const userRef = doc(db, 'users', email)
+        const userSnap = await getDoc(userRef)
 
         if (userSnap.exists()) {
             console.log('User already exists');
